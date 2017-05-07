@@ -40,21 +40,11 @@ public class WaterfallFlowView extends ViewGroup {
             if (child.getVisibility() != View.GONE) {
                 MarginLayoutParams layoutParams = (MarginLayoutParams) (child.getLayoutParams());
                 totalHeight += layoutParams.topMargin + layoutParams.bottomMargin;
-                measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, totalHeight);
+                this.measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, totalHeight);
                 totalHeight += child.getMeasuredHeight();
             }
         }
         this.setMeasuredDimension(widthSize, Math.max(totalHeight, heightSize));
-
-        for (int i = 0; i < this.getChildCount(); i++) {
-            View child = this.getChildAt(i);
-            if (child.getVisibility() != View.GONE) {
-                continue;
-            }
-            MarginLayoutParams layoutParams = (MarginLayoutParams) (child.getLayoutParams());
-            child.measure(MeasureSpec.makeMeasureSpec(child.getMeasuredWidth(), MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(child.getMeasuredHeight(), MeasureSpec.EXACTLY));
-        }
     }
 
     @Override
@@ -65,7 +55,7 @@ public class WaterfallFlowView extends ViewGroup {
             MarginLayoutParams layoutParams = (MarginLayoutParams) (child.getLayoutParams());
             int childLeft = left + layoutParams.leftMargin;
             int childTop = currentY + layoutParams.topMargin;
-            int childRight = childLeft + this.getMeasuredWidth();
+            int childRight = childLeft + child.getMeasuredWidth();
             int childButtom = childTop + child.getMeasuredHeight();
             child.layout(childLeft, childTop, childRight, childButtom);
             currentY = childButtom + layoutParams.bottomMargin;
