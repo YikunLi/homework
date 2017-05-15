@@ -15,9 +15,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Created by KK on 2017/5/14.
  */
@@ -57,7 +54,7 @@ public class ScratchCard extends View {
     }
 
     public ScratchCard(Context context, @Nullable AttributeSet attrs, int defStyleAttr,
-                       int defStyleRes) {
+            int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
 
         this.mPaintcoat = new Paintcoat();
@@ -72,19 +69,20 @@ public class ScratchCard extends View {
             return result;
         }
         switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                this.mCurrentState = State.SCRATCHING;
-                this.mPaintcoat.newLine(event.getX(), event.getY());
-                break;
-            default:
-                this.mPaintcoat.lineTo(event.getX(), event.getY());
-                break;
+        case MotionEvent.ACTION_DOWN:
+            this.mCurrentState = State.SCRATCHING;
+            this.mPaintcoat.newLine(event.getX(), event.getY());
+            break;
+        default:
+            this.mPaintcoat.lineTo(event.getX(), event.getY());
+            break;
         }
         this.invalidate();
 
         if (this.mPaintcoat.getScratchAreaPercent() > SCRATCH_OFF_PERCENT) {
             this.mCurrentState = State.SCRATCHED;
-            Toast.makeText(this.getContext(), this.mScratchResult.getResult(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this.getContext(), this.mScratchResult.getResult(), Toast.LENGTH_SHORT)
+                    .show();
         }
         return true;
     }
@@ -148,11 +146,9 @@ public class ScratchCard extends View {
 
     private class Paintcoat implements ScratchItem {
 
+        private GraphStrategy mGraphStrategy;
+
         private Drawable mPaintcoat;
-
-        private List<Path> mScratchedArea;
-
-        private Path mCurrentPath;
 
         private Paint mPaint;
 
@@ -165,7 +161,7 @@ public class ScratchCard extends View {
             this.mPaint.setStrokeWidth(50);
 
             this.mPaintcoat = ScratchCard.this.getResources().getDrawable(R.drawable.paintcoat);
-            this.mScratchedArea = new ArrayList<>();
+            this.mGraphStrategy = new BasicGraphStrategy();
         }
 
         @Override
@@ -180,7 +176,7 @@ public class ScratchCard extends View {
 
             this.mPaintcoat.draw(canvas);
 
-            for (Path next : this.mScratchedArea) {
+            for (Path next : this.mGraphStrategy.getPaths()) {
                 canvas.drawPath(next, this.mPaint);
             }
 
@@ -189,21 +185,19 @@ public class ScratchCard extends View {
 
         @Override
         public void reset() {
-            this.mScratchedArea.clear();
+            this.mGraphStrategy.reset();
         }
 
         public float getScratchAreaPercent() {
-            return (float) (this.mScratchedArea.size() / 10.0);
+            return (float) (this.mGraphStrategy.getPathArea() / 10.0);
         }
 
         void newLine(float x, float y) {
-            this.mCurrentPath = new Path();
-            this.mScratchedArea.add(this.mCurrentPath);
-            this.mCurrentPath.moveTo(x, y);
+            this.mGraphStrategy.moveTo(x, y);
         }
 
         void lineTo(float x, float y) {
-            this.mCurrentPath.lineTo(x, y);
+
         }
     }
 
