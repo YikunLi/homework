@@ -21,6 +21,7 @@ import android.widget.TextView;
  * Created by KK on 2017/5/19.
  * 封装搜索按钮、动画与输入框，代理并提供部分与Search业务相关的EditText方法
  * TODO
+ * 点击搜索按钮启动动画，最后显示搜索框
  */
 
 public class SearchView extends FrameLayout {
@@ -48,19 +49,22 @@ public class SearchView extends FrameLayout {
         super(context, attrs, defStyleAttr, defStyleRes);
 
         this.mMagnifierView = new MagnifierView(context);
-        LayoutParams layoutParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
+        LayoutParams layoutParams = new LayoutParams(LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT);
         layoutParams.gravity = Gravity.CENTER;
         this.addView(this.mMagnifierView, layoutParams);
 
         this.mInputEditor = new EditText(context);
         this.mInputEditor.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         this.mInputEditor.setVisibility(View.INVISIBLE);
+        this.mInputEditor.setSingleLine();
         layoutParams = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
         this.addView(this.mInputEditor, layoutParams);
 
         this.mMagnifierView.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
+                SearchView.this.mInputEditor.setVisibility(View.INVISIBLE);
                 SearchView.this.mMagnifierView.reset();
                 SearchView.this.mMagnifierView.start();
             }
@@ -206,6 +210,11 @@ public class SearchView extends FrameLayout {
             this.mIsRunning = false;
             this.mStartAngle = START_ANGLE;
             this.mSweepAngle = TOTAL_ANGLE;
+            this.mStartTime = 0;
+            this.mOffset = 0;
+            this.mOffsetHolding = 0;
+            this.mRightLineWidth = 0;
+            this.mLeftLineWidth = 0;
         }
 
         private static final long INVALIDATE_INTERVEL = 50;
@@ -234,6 +243,14 @@ public class SearchView extends FrameLayout {
         }
 
         private long mStartTime;
+        private long mOffset;
+
+        private long mStartOffsetHolding;
+        private long mOffsetHolding;
+
+        private long mRightLineWidth;
+        private long mLeftLineWidth;
+        private long mEditorWidth = 800;
 
         /**
          * Check current state and update data of animation
@@ -242,7 +259,8 @@ public class SearchView extends FrameLayout {
             if (!this.mIsRunning) {
                 return;
             }
-            long interval = (SystemClock.elapsedRealtime() - this.mStartTime) / INVALIDATE_INTERVEL;
+            long interval = (SystemClock.elapsedRealtime() - this.mStartTime) / INVALIDATE_INTERVEL * 5;
+            this.mOffset = interval;
             Log.e(TAG, "interval : " + interval);
             switch (this.mState) {
                 case IDLE:
@@ -250,22 +268,35 @@ public class SearchView extends FrameLayout {
                 case WITH_CIRCLE:
                     if (this.mStartAngle >= TOTAL_ANGLE) {
                         this.mState = State.WITHOUT_CIRCLE;
+                        this.mStartOffsetHolding = interval;
                     } else {
                         this.mStartAngle += interval;
                         this.mSweepAngle -= interval;
+                        this.mRightLineWidth = interval;
+                        this.mLeftLineWidth = interval * 2;
                         break;
                     }
                 case WITHOUT_CIRCLE:
-                    // TODO
-                    break;
+                    if (this.mOffsetHolding >= this.mHoldLength) {
+                        this.mState = State.ONLY_LINE;
+                    } else {
+                        this.mOffsetHolding = interval - this.mStartOffsetHolding;
+                        this.mRightLineWidth = interval;
+                        this.mLeftLineWidth = interval * 2;
+                        break;
+                    }
                 case ONLY_LINE:
-                    // TODO
-                    break;
+                    if (this.mRightLineWidth + this.mLeftLineWidth >= this.mEditorWidth) {
+                        this.mState = State.FINISHED;
+                    } else {
+                        this.mRightLineWidth = interval;
+                        this.mLeftLineWidth = interval * 2;
+                        break;
+                    }
                 case FINISHED:
                     this.mAnimationListener.onAnimationEnd();
                     break;
             }
-
 
         }
 
@@ -281,7 +312,7 @@ public class SearchView extends FrameLayout {
             }
 
             float top = this.mStrokeWidth;
-            float left = (float) ((this.getWidth() - magnifierWidth) / 2);
+            float left = this.mOffset + (float) ((this.getWidth() - magnifierWidth) / 2);
             float right = left + this.mRadius * 2;
             float bottom = top + this.mRadius * 2;
 
@@ -303,9 +334,13 @@ public class SearchView extends FrameLayout {
             }
 
             int saveCount = canvas.save();
-            float left = (float) ((this.getWidth() - magnifierWidth) / 2);
+            float left = this.mOffset + (float) ((this.getWidth() - magnifierWidth) / 2);
             canvas.translate(left + (float) holdStart, (float) holdStart);
-            canvas.drawLine(0, 0, this.mHoldLength, this.mHoldLength, this.mPaint);
+            if (this.mState == State.WITHOUT_CIRCLE) {
+                canvas.drawLine(this.mOffsetHolding, this.mOffsetHolding, this.mHoldLength, this.mHoldLength, this.mPaint);
+            } else {
+                canvas.drawLine(0, 0, this.mHoldLength, this.mHoldLength, this.mPaint);
+            }
             canvas.restoreToCount(saveCount);
         }
 
@@ -322,10 +357,10 @@ public class SearchView extends FrameLayout {
             }
 
             int saveCount = canvas.save();
-            float x = (float) (this.getWidth() / 2 + magnifierWidth / 2);
-            float y = (float) magnifierWidth;
+            float x = (float) (this.getWidth() / 2 + magnifierWidth / 2) + this.mStrokeWidth;
+            float y = (float) (magnifierWidth - 50);
             canvas.translate(x, y);
-            canvas.drawLine(0, y, 100, y, this.mPaint);
+            canvas.drawLine(-this.mLeftLineWidth, y, this.mRightLineWidth, y, this.mPaint);
             canvas.restoreToCount(saveCount);
         }
 

@@ -17,11 +17,6 @@
             android:scrollbars="horizontal"/>
     </HorizontalScrollView>
 
-
-    <com.dongnao.homework7.RevealView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
     <com.dongnao.homework7.SearchView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
