@@ -52,8 +52,8 @@ public class RippleView extends View {
     }
 
     public void restart() {
-        if (this.mValueAnimator != null) {
-            this.mValueAnimator.cancel();
+        if (this.mMoveUpAnimator != null) {
+            this.mMoveUpAnimator.cancel();
         }
         this.mWaveHeight = 0;
         this.invalidate();
@@ -62,11 +62,11 @@ public class RippleView extends View {
     /**
      * 一屏随机产生波纹数量
      */
-    private static final int[] RANDOM_RIPPLE_COUNT = { 2, 3 };
+    private static final int[] RANDOM_RIPPLE_COUNT = { 3, 4 };
     /**
      * 偏移单位
      */
-    private static final int OFFSET_UNIT = 10;
+    private static final int OFFSET_UNIT = 15;
 
     /**
      * 波的类型
@@ -86,15 +86,11 @@ public class RippleView extends View {
         this.mRipples.clear();
         this.mEndPoint = new Point(0, 0);
         Wave wave = Wave.WAVE_CREST;
-        while (this.mEndPoint.x < this.getWidth()) {
-            Ripple ripple = this.generateRipple(wave);
-            this.mRipples.add(ripple);
-            wave = wave == Wave.WAVE_CREST ? Wave.WAVE_THROUGH : Wave.WAVE_CREST;
-        }
+        this.updateRipples(wave);
     }
 
     /**
-     * 随机生成一条新的Path
+     * 随机生成一条新的Ripple
      * @return
      */
     private Ripple generateRipple(Wave wave) {
@@ -106,7 +102,7 @@ public class RippleView extends View {
         double averageWidth = this.getWidth() * 1.0 / count;
         double offsetWidth = this.getWidth() * 1.0 / OFFSET_UNIT;
         double width = this.random(averageWidth - offsetWidth, averageWidth + offsetWidth);
-        double height = this.random(averageWidth - 2 * offsetWidth, averageWidth);
+        double height = this.random(averageWidth - 3 * offsetWidth, averageWidth - 2 * offsetWidth);
         int control1X = (int) this.random(this.mEndPoint.x, this.mEndPoint.x + width / 2);
         int control1Y = (int) (coefficient
                 * this.random(coefficient * this.mEndPoint.y + height / 2,
@@ -119,7 +115,7 @@ public class RippleView extends View {
         this.mEndPoint.y = (int) this.random(this.mEndPoint.y - offsetWidth,
                 this.mEndPoint.y + offsetWidth);
 
-        ripple.controlPoint1 = new Point(control1X, control2Y);
+        ripple.controlPoint1 = new Point(control1X, control1Y);
         ripple.controlPoint2 = new Point(control2X, control2Y);
         ripple.endPoint = new Point(this.mEndPoint.x, this.mEndPoint.y);
         ripple.wave = wave;
@@ -165,20 +161,49 @@ public class RippleView extends View {
         canvas.restore();
     }
 
-    private ValueAnimator mValueAnimator;
+    private ValueAnimator mMoveUpAnimator;
 
     private void startAnimation() {
-        this.mValueAnimator = ValueAnimator.ofObject(new TranslationEvaluator(), START_HEIGHT,
+        this.mMoveUpAnimator = ValueAnimator.ofObject(new TranslationEvaluator(), START_HEIGHT,
                 this.getHeight() * 2);
-        this.mValueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+        this.mMoveUpAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
                 RippleView.this.mWaveHeight = (int) animation.getAnimatedValue();
+                RippleView.this.updateRippleX();
                 RippleView.this.invalidate();
             }
         });
-        this.mValueAnimator.setDuration(8000);
-        this.mValueAnimator.start();
+        this.mMoveUpAnimator.setDuration(8000);
+        this.mMoveUpAnimator.start();
+    }
+
+    /**
+     * 更新水波纹X坐标
+     */
+    private void updateRippleX() {
+        int offset = 10;
+        while (this.mRipples.get(0).endPoint.x - 10 <= 0) {
+            this.mRipples.remove(0);
+        }
+        for (Ripple next : this.mRipples) {
+            next.startPoint.x -= offset;
+            next.controlPoint1.x -= offset;
+            next.controlPoint2.x -= offset;
+            next.endPoint.x -= offset;
+        }
+        this.mEndPoint.x -= offset;
+        Wave wave = this.mRipples.get(this.mRipples.size() - 1).wave;
+        wave = (wave == Wave.WAVE_CREST ? Wave.WAVE_THROUGH : Wave.WAVE_CREST);
+        this.updateRipples(wave);
+    }
+
+    private void updateRipples(Wave wave) {
+        while (this.mEndPoint.x < this.getWidth()) {
+            Ripple ripple = this.generateRipple(wave);
+            this.mRipples.add(ripple);
+            wave = (wave == Wave.WAVE_CREST ? Wave.WAVE_THROUGH : Wave.WAVE_CREST);
+        }
     }
 
     private class TranslationEvaluator implements TypeEvaluator<Integer> {
