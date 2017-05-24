@@ -7,6 +7,4 @@
 /captures
 .externalNativeBuild
 build.gradle
-libs/
 proguard-rules.pro
-src/
